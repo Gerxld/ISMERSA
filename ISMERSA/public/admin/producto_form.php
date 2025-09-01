@@ -1,103 +1,24 @@
 <?php
 declare(strict_types=1);
-require __DIR__ . '/../partials/auth.php';
-require_admin();
-require __DIR__ . '/../../db/DatabaseManager.php';
-require __DIR__ . '/../partials/header.php';
-
-$db = new DatabaseManager();
-$estados = $db->getEstados();
-
-$editId = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
-$producto = $editId ? $db->getProductById($editId) : null;
-
-$ok = $err = '';
+require __DIR__ . '/../../src/bootstrap.php';
+require_admin_guard();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        if (!empty($_POST['id'])) {
-            // UPDATE
-            $pid = (int)$_POST['id'];
-            $db->updateProduct($pid, [
-                'sku'       => $_POST['sku'] ?? null,
-                'nombre'    => $_POST['nombre'] ?? '',
-                'descripcion'=> $_POST['descripcion'] ?? null,
-                'marca'     => $_POST['marca'] ?? null,
-                'cantidad'  => $_POST['cantidad'] ?? 0,
-                'precio'    => $_POST['precio'] ?? 0,
-                'estado_id' => $_POST['estado_id'] ?? null,
-                'peso_kg'   => $_POST['peso_kg'] ?? null,
-                'ubicacion' => $_POST['ubicacion'] ?? null,
-            ]);
-            $ok = 'Producto actualizado.';
-
-            // subir imágenes adicionales
-            if (!empty($_FILES['fotos']['name'][0])) {
-                $imgs = [];
-                $files = $_FILES['fotos'];
-                $total = count($files['name']);
-                for ($i=0;$i<$total;$i++){
-                    if ($files['error'][$i]!==UPLOAD_ERR_OK) continue;
-                    $tmp  = $files['tmp_name'][$i];
-                    $mime = @mime_content_type($tmp);
-                    if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif'], true)) continue;
-                    $ext  = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
-                    $safe = bin2hex(random_bytes(8)).'.'.$ext;
-                    $destFs = __DIR__ . '/../../uploads/imagenes/' . $safe;
-                    if (!move_uploaded_file($tmp, $destFs)) continue;
-                    $rutaPublic = '../uploads/imagenes/' . $safe; // relativa desde /public/admin/*
-                    $imgs[] = ['ruta'=>$rutaPublic, 'alt_text'=>$_POST['nombre'] ?? 'imagen', 'es_principal'=>0];
-                }
-                if ($imgs) $db->insertImages($pid, $imgs, false);
-            }
-
-            $producto = $db->getProductById($pid);
-        } else {
-            // CREATE
-            $pid = $db->createProduct([
-                'sku'       => $_POST['sku'] ?? null,
-                'nombre'    => $_POST['nombre'] ?? '',
-                'descripcion'=> $_POST['descripcion'] ?? null,
-                'marca'     => $_POST['marca'] ?? null,
-                'cantidad'  => $_POST['cantidad'] ?? 0,
-                'precio'    => $_POST['precio'] ?? 0,
-                'estado_id' => $_POST['estado_id'] ?? null,
-                'peso_kg'   => $_POST['peso_kg'] ?? null,
-                'ubicacion' => $_POST['ubicacion'] ?? null,
-            ]);
-
-            $imgs = [];
-            if (!empty($_FILES['fotos']['name'][0])) {
-                $files = $_FILES['fotos'];
-                $total = count($files['name']);
-                for ($i=0;$i<$total;$i++){
-                    if ($files['error'][$i]!==UPLOAD_ERR_OK) continue;
-                    $tmp  = $files['tmp_name'][$i];
-                    $mime = @mime_content_type($tmp);
-                    if (!in_array($mime, ['image/jpeg','image/png','image/webp','image/gif'], true)) continue;
-                    $ext  = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
-                    $safe = bin2hex(random_bytes(8)).'.'.$ext;
-                    $destFs = __DIR__ . '/../../uploads/imagenes/' . $safe;
-                    if (!move_uploaded_file($tmp, $destFs)) continue;
-                    $rutaPublic = '../uploads/imagenes/' . $safe;
-                    $imgs[] = ['ruta'=>$rutaPublic, 'alt_text'=>$_POST['nombre'] ?? 'imagen', 'es_principal'=> ($i===0?1:0), 'orden'=>$i+1];
-                }
-            }
-            if ($imgs) $db->insertImages($pid, $imgs, true);
-
-            $ok = 'Producto creado.';
-            header('Location: '.public_url('admin/producto_form.php').'?edit='.$pid);
-            exit;
-        }
-    } catch (Throwable $e) {
-        $err = 'Error: '.$e->getMessage();
-    }
+  ProductController::save($_POST, $_FILES);
 }
+
+$id = isset($_GET['edit']) ? (int)$_GET['edit'] : null;
+$data = ProductController::getFormData($id);
+extract($data, EXTR_OVERWRITE); // $estados, $producto
+
+$csrf = csrf_token();
+require __DIR__ . '/../partials/header.php';
 ?>
 <div class="mb-3 d-flex justify-content-between align-items-center">
   <a class="btn btn-outline-secondary" href="<?= public_url('admin/productos.php') ?>">&larr; Volver</a>
   <?php if($producto): ?>
     <form action="<?= public_url('admin/producto_estado.php') ?>" method="post" class="d-inline">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
       <input type="hidden" name="id" value="<?= (int)$producto['id_producto'] ?>">
       <input type="hidden" name="accion" value="publicar">
       <button class="btn btn-success">Publicar</button>
@@ -106,10 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <h4><?= $producto ? 'Editar producto' : 'Nuevo producto' ?></h4>
-<?php if($ok): ?><div class="alert alert-success"><?= htmlspecialchars($ok) ?></div><?php endif; ?>
-<?php if($err): ?><div class="alert alert-danger"><?= htmlspecialchars($err) ?></div><?php endif; ?>
 
 <form method="post" enctype="multipart/form-data" class="row g-3">
+  <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
   <?php if($producto): ?>
     <input type="hidden" name="id" value="<?= (int)$producto['id_producto'] ?>">
   <?php endif; ?>
@@ -122,9 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <label class="form-label">Nombre *</label>
     <input name="nombre" required class="form-control" value="<?= htmlspecialchars($producto['nombre'] ?? '') ?>">
   </div>
+
   <div class="col-md-4">
-    <label class="form-label">Marca</label>
-    <input name="marca" class="form-control" value="<?= htmlspecialchars($producto['marca'] ?? '') ?>">
+    <label class="form-label">Marca del producto (Brand) *</label>
+    <input name="marca_producto" required class="form-control" value="<?= htmlspecialchars($producto['marca_producto'] ?? '') ?>">
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Marca del vehículo (Make)</label>
+    <input name="marca_vehiculo" class="form-control" value="<?= htmlspecialchars($producto['marca_vehiculo'] ?? '') ?>">
   </div>
 
   <div class="col-md-3">
@@ -171,21 +97,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </form>
 
-<?php if ($producto): ?>
+<?php if ($producto && !empty($producto['imagenes'])): ?>
 <hr class="my-4">
 <h5>Imágenes</h5>
 <div class="row g-3">
-  <?php foreach (($producto['imagenes'] ?? []) as $img): ?>
+  <?php foreach ($producto['imagenes'] as $img): ?>
     <div class="col-6 col-md-3">
       <div class="card shadow-sm">
         <img src="<?= htmlspecialchars($img['ruta']) ?>" class="card-img-top" style="object-fit:cover;height:160px">
         <div class="card-body d-flex justify-content-between">
           <form method="post" action="<?= public_url('admin/imagen_set_primary.php') ?>">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
             <input type="hidden" name="pid" value="<?= (int)$producto['id_producto'] ?>">
             <input type="hidden" name="iid" value="<?= (int)$img['id_imagen'] ?>">
             <button class="btn btn-sm btn-outline-primary" <?= (int)$img['es_principal']===1?'disabled':'' ?>>Principal</button>
           </form>
           <form method="post" action="<?= public_url('admin/imagen_delete.php') ?>" onsubmit="return confirm('¿Eliminar imagen?');">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+            <input type="hidden" name="pid" value="<?= (int)$producto['id_producto'] ?>">
             <input type="hidden" name="iid" value="<?= (int)$img['id_imagen'] ?>">
             <button class="btn btn-sm btn-outline-danger">Eliminar</button>
           </form>

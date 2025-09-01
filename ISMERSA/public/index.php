@@ -1,22 +1,19 @@
 <?php
 declare(strict_types=1);
+require __DIR__ . '/../src/bootstrap.php';
 require __DIR__ . '/partials/header.php';
 ?>
 
-
-<!-- CTA STRIP -->
 <!-- CTA STRIP -->
 <div class="bg-light rounded-3 shadow-sm p-4 mb-3 text-center">
   <p class="mb-3 fs-5">
     <strong>¿Buscas repuestos de transmisión?</strong><br>
     Explora nuestro catálogo publicado.
   </p>
-  <a href="productos.php" class="btn btn-outline-dark btn-lg fw-semibold">
+  <a href="<?= public_url('productos.php') ?>" class="btn btn-outline-dark btn-lg fw-semibold">
     Ver catálogo
   </a>
 </div>
-
-
 
 <!-- HERO / CAROUSEL -->
 <div id="heroCarousel" class="carousel slide mb-4" data-bs-ride="carousel" data-bs-interval="3000" data-bs-touch="true">
@@ -26,11 +23,8 @@ require __DIR__ . '/partials/header.php';
     <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
   </div>
   <div class="carousel-inner rounded-3 shadow-sm">
-    <!-- Reemplaza las rutas por tus imágenes -->
     <div class="carousel-item active">
       <img src="../uploads/imagenes/Ismersa-banner.jpg" class="d-block w-100" alt="Repuestos de transmisión - banner 1" style="max-height:520px;object-fit:cover;">
-      <div class="carousel-caption d-none d-md-block text-start">
-      </div>
     </div>
     <div class="carousel-item">
       <img src="../uploads/imagenes/Ismersa-producto2.jpg" class="d-block w-100" alt="Repuestos de transmisión - banner 2" style="max-height:520px;object-fit:cover;">
@@ -78,7 +72,7 @@ require __DIR__ . '/partials/header.php';
   <div class="row g-4">
     <div class="col-lg-6 order-lg-2">
       <h2 class="fw-bold mb-3">Quiénes somos</h2>
-      <p>Somos un equipo comprometido con la **confiabilidad** y la **atención al cliente**. Nuestro catálogo incluye filtros, kits de empaques, solenoides, sensores, bombas y más, con una selección pensada para resolver necesidades reales de diagnóstico y reparación.</p>
+      <p>Somos un equipo comprometido con la confiabilidad y la atención al cliente. Nuestro catálogo incluye filtros, kits de empaques, solenoides, sensores, bombas y más, con una selección pensada para resolver necesidades reales de diagnóstico y reparación.</p>
       <ul class="mb-0">
         <li>Selección de repuestos con especificaciones claras.</li>
         <li>Soporte previo y posterior a la compra.</li>
@@ -107,11 +101,10 @@ require __DIR__ . '/partials/header.php';
       </a>
     </div>
     <div class="col-lg-7">
-      <!-- Mapa embebido (puedes reemplazar la src con tu ubicación exacta) -->
       <div class="ratio ratio-16x9 rounded-3 overflow-hidden shadow-sm">
         <iframe
           src="https://www.google.com/maps?q=Ismersa%20Transmisiones%20Panama&output=embed"
-          allowfullscreen=""
+          allowfullscreen
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"></iframe>
       </div>
@@ -126,9 +119,12 @@ require __DIR__ . '/partials/header.php';
   <div class="row g-4">
     <div class="col-lg-6">
       <h2 class="fw-bold mb-3">Contáctanos</h2>
-      <p class="mb-1">Correo: <a href="mailto:ventas@ismersa.com">ventas@ismersa.com</a></p>
-      <p class="mb-1">Teléfono: <a href="tel:+50760000000">+507 6000-0000</a></p>
+      <p class="mb-1">Correo: <a href="mailto:Ismersa507@gmail.com">Ismersa507@gmail.com</a></p>
+      <p class="mb-1">Teléfono: <a href="tel:3955456">395-5456</a></p>
+      <p class="mb-1">Celular: <a href="tel:67244138">6724-4138</a></p>
       <p class="text-muted small">Horario: Lun–Vie 8:00–17:00</p>
+      <p class="text-muted small">Horario: Sábados 8:00–12:00</p>
+      <p class="text-muted small">Horario: Domingos Cerrados</p>
     </div>
     <div class="col-lg-6">
       <div class="p-4 bg-white rounded-3 shadow-sm">

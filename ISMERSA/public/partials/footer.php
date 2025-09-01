@@ -19,8 +19,21 @@
             <i class="bi bi-facebook"></i>
         </a>
     </div>
-
+  </div>
 </footer>
+
+<style>
+  .social-link {
+    color: #aaa; /* gris claro por defecto */
+    transition: color 0.3s ease;
+  }
+  .social-link.instagram:hover {
+    color: #E4405F; /* rosa Instagram */
+  }
+  .social-link.facebook:hover {
+    color: #1877F2; /* azul Facebook */
+  }
+</style>
 
 <!-- Bootstrap 5 (JS) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

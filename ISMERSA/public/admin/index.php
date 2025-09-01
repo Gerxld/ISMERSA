@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-require __DIR__ . '/../partials/auth.php';
-require_admin();
-require __DIR__ . '/../../db/DatabaseManager.php';
+require __DIR__ . '/../../src/bootstrap.php';
+require_admin_guard();
+
 require __DIR__ . '/../partials/header.php';
 
 $db   = new DatabaseManager();
@@ -14,36 +14,28 @@ $last = $db->getRecentProducts(8);
 
 <div class="row g-3">
   <div class="col-sm-6 col-lg-3">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Publicados (con stock)</div>
-        <div class="fs-3 fw-bold"><?= (int)$kpis['publicados'] ?></div>
-      </div>
-    </div>
+    <div class="card shadow-sm"><div class="card-body">
+      <div class="text-muted small">Publicados (con stock)</div>
+      <div class="fs-3 fw-bold"><?= (int)$kpis['publicados'] ?></div>
+    </div></div>
   </div>
   <div class="col-sm-6 col-lg-3">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Productos totales</div>
-        <div class="fs-3 fw-bold"><?= (int)$kpis['productos'] ?></div>
-      </div>
-    </div>
+    <div class="card shadow-sm"><div class="card-body">
+      <div class="text-muted small">Productos totales</div>
+      <div class="fs-3 fw-bold"><?= (int)$kpis['productos'] ?></div>
+    </div></div>
   </div>
   <div class="col-sm-6 col-lg-3">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Marcas</div>
-        <div class="fs-3 fw-bold"><?= (int)$kpis['marcas'] ?></div>
-      </div>
-    </div>
+    <div class="card shadow-sm"><div class="card-body">
+      <div class="text-muted small">Marcas</div>
+      <div class="fs-3 fw-bold"><?= (int)$kpis['marcas'] ?></div>
+    </div></div>
   </div>
   <div class="col-sm-6 col-lg-3">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Imágenes cargadas</div>
-        <div class="fs-3 fw-bold"><?= (int)$kpis['imagenes'] ?></div>
-      </div>
-    </div>
+    <div class="card shadow-sm"><div class="card-body">
+      <div class="text-muted small">Imágenes</div>
+      <div class="fs-3 fw-bold"><?= (int)$kpis['imagenes'] ?></div>
+    </div></div>
   </div>
 </div>
 
