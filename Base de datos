@@ -1,0 +1,159 @@
+/* ==========================================================
+   ISMERSA - DB SETUP (MySQL/MariaDB)
+   ========================================================== */
+
+-- 1) Base de datos
+CREATE DATABASE IF NOT EXISTS ismersa
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE ismersa;
+
+-- 2) Tablas (orden correcto por FK)
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP VIEW  IF EXISTS v_productos_publicados;
+DROP TABLE IF EXISTS producto_imagenes;
+DROP TABLE IF EXISTS productos;
+DROP TABLE IF EXISTS usuarios;
+DROP TABLE IF EXISTS estados;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ==========================================================
+-- ESTADOS
+-- ==========================================================
+CREATE TABLE estados (
+  id_estado      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nombre         VARCHAR(30)  NOT NULL UNIQUE,   -- publicado, inactivo, archivado
+  descripcion    VARCHAR(150) NULL,
+  es_publicable  TINYINT(1)   NOT NULL DEFAULT 0,
+  creado_en      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT INTO estados (nombre, descripcion, es_publicable) VALUES
+('publicado', 'Visible en catálogo público', 1),
+('inactivo',  'Oculto (no visible al público)', 0),
+('archivado', 'Retirado del catálogo / histórico', 0);
+
+-- ==========================================================
+-- USUARIOS (solo admin)
+-- ==========================================================
+CREATE TABLE usuarios (
+  id_usuario     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nombre         VARCHAR(100) NOT NULL,
+  email          VARCHAR(150) NOT NULL UNIQUE,
+  password_hash  VARCHAR(255) NOT NULL,
+  is_admin       TINYINT(1)   NOT NULL DEFAULT 0,
+  activo         TINYINT(1)   NOT NULL DEFAULT 1,
+  creado_en      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Admin por defecto:
+-- Password temporal: Admin12345!
+-- IMPORTANTE: cambia esto después de instalar.
+-- Hash bcrypt para "Admin12345!" (válido en PHP password_verify)
+INSERT INTO usuarios (nombre, email, password_hash, is_admin, activo)
+VALUES (
+  'Administrador',
+  'admin@ismersa.com',
+  '$2y$10$7zQYdWQnQqH9tqM7s0Zf7e9m2vU3yQ2EoU6mT2o1g8d1h8bYpT3cK',
+  1,
+  1
+);
+
+-- ==========================================================
+-- PRODUCTOS
+-- ==========================================================
+CREATE TABLE productos (
+  id_producto     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  sku             VARCHAR(60)  NULL UNIQUE,  -- ej: FLT-045
+  nombre          VARCHAR(200) NOT NULL,
+
+  -- Marca del producto (ej: Aisin, Sonnax, OEM, etc.)
+  marca_producto  VARCHAR(100) NOT NULL DEFAULT '',
+
+  -- Marca del vehículo (ej: Honda, Toyota, etc.)
+  marca_vehiculo  VARCHAR(100) NULL,
+
+  descripcion     TEXT NULL,
+
+  cantidad        INT UNSIGNED NOT NULL DEFAULT 0,
+  precio          DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+
+  estado_id       INT UNSIGNED NOT NULL,
+
+  peso_kg         DECIMAL(10,3) NULL,
+  ubicacion       VARCHAR(120) NULL,
+
+  creado_en       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_productos_estado
+    FOREIGN KEY (estado_id) REFERENCES estados(id_estado)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Índices útiles
+CREATE INDEX idx_productos_nombre       ON productos(nombre);
+CREATE INDEX idx_productos_marca_prod   ON productos(marca_producto);
+CREATE INDEX idx_productos_marca_veh    ON productos(marca_vehiculo);
+CREATE INDEX idx_productos_estado       ON productos(estado_id);
+CREATE INDEX idx_productos_precio       ON productos(precio);
+CREATE INDEX idx_productos_actualizado  ON productos(actualizado_en);
+
+-- ==========================================================
+-- IMÁGENES DE PRODUCTO
+-- ==========================================================
+CREATE TABLE producto_imagenes (
+  id_imagen      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  producto_id    INT UNSIGNED NOT NULL,
+  ruta           VARCHAR(255) NOT NULL,   -- ruta relativa usada por tu app (ej: ../uploads/imagenes/xxx.jpg)
+  alt_text       VARCHAR(150) NULL,
+  es_principal   TINYINT(1) NOT NULL DEFAULT 0,
+  orden          INT UNSIGNED NOT NULL DEFAULT 1,
+  creado_en      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_imagenes_producto
+    FOREIGN KEY (producto_id) REFERENCES productos(id_producto)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_imagenes_producto ON producto_imagenes(producto_id);
+CREATE INDEX idx_imagenes_principal ON producto_imagenes(producto_id, es_principal, orden);
+
+-- ==========================================================
+-- VISTA: productos publicados y con stock
+-- ==========================================================
+CREATE OR REPLACE VIEW v_productos_publicados AS
+SELECT
+  p.id_producto,
+  p.sku,
+  p.nombre,
+  p.marca_producto,
+  p.marca_vehiculo,
+  p.descripcion,
+  p.cantidad,
+  p.precio,
+  p.estado_id,
+  e.nombre AS estado_nombre,
+  p.creado_en,
+  p.actualizado_en,
+  p.actualizado_en AS publicado_en
+FROM productos p
+JOIN estados e ON e.id_estado = p.estado_id
+WHERE e.nombre = 'publicado'
+  AND p.cantidad > 0;
+
+-- ==========================================================
+-- (Opcional) Usuario SQL para la app
+-- ==========================================================
+-- Crea un usuario SQL dedicado (recomendado en producción)
+-- Cambia contraseña y host según tu server.
+-- CREATE USER IF NOT EXISTS 'ismersa_app'@'localhost' IDENTIFIED BY 'CambiaEstaPassFuerte_2025!';
+-- GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX ON ismersa.* TO 'ismersa_app'@'localhost';
+-- FLUSH PRIVILEGES;
